@@ -162,13 +162,23 @@ function play(c,ctx,onFrame){
     };
   });
 }
-async function exportClip(c,i){
+let actx,dest;
+function audioTrack(){
+  if(!actx){
+    actx=new (window.AudioContext||window.webkitAudioContext)();
+    const src=actx.createMediaElementSource(v);
+    dest=actx.createMediaStreamDestination();
+    src.connect(dest); src.connect(actx.destination);
+  }
+  actx.resume();
+  return dest.stream.getAudioTracks()[0];
+}
+  async function exportClip(c,i){
   const cv=document.createElement('canvas');cv.width=1080;cv.height=1920;
   const ctx=cv.getContext('2d');
   const out=cv.captureStream(30);
   v.muted=false;
-  const vs=v.captureStream?v.captureStream():null;
-  if(vs)vs.getAudioTracks().forEach(t=>out.addTrack(t));
+    try{ out.addTrack(audioTrack()); }catch(e){}
   const mime=MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':'video/webm';
   const rec=new MediaRecorder(out,{mimeType:mime,videoBitsPerSecond:6e6});
   const parts=[];rec.ondataavailable=e=>parts.push(e.data);
