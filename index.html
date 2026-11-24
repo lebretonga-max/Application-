@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clip — clipping vidéo automatique</title>
+<style>
+:root{--bg:#0f1115;--card:#1a1d24;--tx:#f2f3f5;--mut:#8b91a0;--ac:#7c5cff}
+*{box-sizing:border-box}
+body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--tx);padding:16px;max-width:900px;margin:auto}
+h1{font-size:22px;margin:8px 0 16px}
+.card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:12px}
+button,input,select{font:inherit;border-radius:8px;border:1px solid #333845;background:#23262f;color:var(--tx);padding:8px 12px}
+button.p{background:var(--ac);border:0;font-weight:600}
+input[type=text]{width:100%}
+label{display:block;color:var(--mut);font-size:13px;margin:8px 0 4px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.clip canvas{width:100%;aspect-ratio:9/16;background:#000;border-radius:8px}
+.mut{color:var(--mut);font-size:13px}
+#prog{height:6px;background:#23262f;border-radius:3px;overflow:hidden;margin-top:8px}
+#prog i{display:block;height:100%;width:0;background:var(--ac)}
+video{display:none}
+</style>
+</head>
+<body>
+<h1>✂️ Clip</h1>
+
+<div class="card">
+  <input type="file" id="file" accept="video/*">
+  <div class="row" style="margin-top:10px">
+    <span class="mut">Nb de clips</span><input type="number" id="n" value="5" min="1" max="12" style="width:70px">
+    <span class="mut">Durée (s)</span><input type="number" id="dur" value="30" min="10" max="90" style="width:70px">
+    <button class="p" id="go">Analyser</button>
+  </div>
+  <label>URL du backend (optionnel, pour les sous-titres Whisper)</label>
+  <input type="text" id="api" placeholder="https://clip.onrender.com">
+  <div id="prog"><i></i></div>
+  <div class="mut" id="status"></div>
+</div>
+
+<div class="clips" id="clips"></div>
+<video id="v" playsinline></video>
+
+<script>
+const $=id=>document.getElementById(id);
+const v=$('v'),status=m=>$('status').textContent=m,prog=p=>$('prog').firstElementChild.style.width=p+'%';
+let url=null,clips=[];
+
+$('file').onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  if(url)URL.revokeObjectURL(url);
+  url=URL.createObjectURL(f); v.src=url; status(f.name);
+};
+
+async function energy(file){
+  const buf=await file.arrayBuffer();
+  const ctx=new (window.OfflineAudioContext||window.AudioContext)(1,1,44100);
+  const ab=await ctx.decodeAudioData(buf);
+  const d=ab.getChannelData(0),sr=ab.sampleRate,step=sr;
+  const out=[];
+  for(let i=0;i+step<=d.length;i+=step){
+    let s=0; for(let j=i;j<i+step;j+=16)s+=d[j]*d[j];
+    out.push(Math.sqrt(s/(step/16)));
+  }
+  return out;
+}
+function pick(e,n,dur){
+  const sc=[]; let acc=e.slice(0,dur).reduce((a,b)=>a+b,0);
+  for(let i=0;i+dur<=e.length;i++){
+    if(i>0)acc+=e[i+dur-1]-e[i-1];
+    sc.push({t:i,s:acc/dur});
+  }
+  sc.sort((a,b)=>b.s-a.s);
+  const res=[];
+  for(const c of sc){
+    if(res.length>=n)break;
+    if(res.every(r=>Math.abs(r.t-c.t)>=dur))res.push(c);
+  }
+  const max=Math.max(...res.map(r=>r.s))||1;
+  return res.map(r=>({start:r.t,dur,score:Math.round(r.s/max*100),subs:[]})).sort((a,b)=>a.start-b.start);
+}
+
+$('go').onclick=async()=>{
+  const f=$('file').files[0]; if(!f)return status('Choisis une vidéo.');
+  try{
+    status('Analyse audio…'); prog(20);
+    const e=await energy(f);
+    clips=pick(e,+$('n').value,+$('dur').value); prog(60);
+    render();
+    if($('api').value.trim()){ await transcribeAll(f); }
+    prog(100); status(clips.length+' clips prêts.');
+  }catch(err){status('Erreur : '+err.message)}
+};
+
+async function transcribeAll(f){
+  const base=$('api').value.trim().replace(/\/$/,'');
+  for(let i=0;i<clips.length;i++){
+    status(`Sous-titres ${i+1}/${clips.length}…`);
+    const fd=new FormData(); fd.append('file',f);
+    fd.append('start',clips[i].start); fd.append('end',clips[i].start+clips[i].dur);
+    try{
+      const r=await fetch(base+'/transcribe',{method:'POST',body:fd});
+      clips[i].subs=(await r.json()).segments||[];
+    }catch(e){status('Backend injoignable : clips sans sous-titres.');break}
+    prog(60+40*(i+1)/clips.length);
+  }
+  render();
+}
+
+function draw(c,ctx,t){
+  const W=ctx.canvas.width,H=ctx.canvas.height;
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  const vw=v.videoWidth,vh=v.videoHeight; if(!vw)return;
+  const sw=vh*9/16;
+  ctx.drawImage(v,(vw-sw)/2,0,sw,vh,0,0,W,H);
+  const s=c.subs.find(x=>t>=x.start&&t<=x.end);
+  if(s){
+    ctx.font=`bold ${W*0.07}px system-ui`;ctx.textAlign='center';
+    ctx.lineWidth=W*0.012;ctx.strokeStyle='#000';ctx.fillStyle='#fff';
+    const words=s.text.trim().split(' '),lines=[];let l='';
+    for(const w of words){if(ctx.measureText(l+w).width>W*.85){lines.push(l);l=''}l+=w+' '}
+    lines.push(l);
+    lines.forEach((ln,i)=>{const y=H*0.75+i*W*0.09;ctx.strokeText(ln,W/2,y);ctx.fillText(ln,W/2,y)});
+  }
+}
+function render(){
+  const box=$('clips');box.innerHTML='';
+  clips.forEach((c,i)=>{
+    const d=document.createElement('div');d.className='card clip';
+    d.innerHTML=`<canvas width="270" height="480"></canvas>
+      <div class="mut">Clip ${i+1} · ${fmt(c.start)} → ${fmt(c.start+c.dur)} · score ${c.score}</div>
+      <div class="row" style="margin-top:8px"><button>▶︎ Aperçu</button><button class="p">Exporter</button></div>`;
+    const cv=d.querySelector('canvas'),ctx=cv.getContext('2d');
+    const [pv,ex]=d.querySelectorAll('button');
+    v.currentTime=c.start;
+    v.addEventListener('seeked',()=>draw(c,ctx,c.start),{once:true});
+    pv.onclick=()=>play(c,ctx);
+    ex.onclick=()=>exportClip(c,i);
+    box.appendChild(d);
+  });
+}
+function play(c,ctx,onFrame){
+  return new Promise(res=>{
+    v.currentTime=c.start;
+    v.onseeked=()=>{
+      v.onseeked=null;v.play();
+      const loop=()=>{
+        draw(c,ctx,v.currentTime);onFrame&&onFrame();
+        if(v.currentTime>=c.start+c.dur||v.ended){v.pause();res();return}
+        requestAnimationFrame(loop);
+      };loop();
+    };
+  });
+}
+async function exportClip(c,i){
+  const cv=document.createElement('canvas');cv.width=1080;cv.height=1920;
+  const ctx=cv.getContext('2d');
+  const out=cv.captureStream(30);
+  v.muted=false;
+  const vs=v.captureStream?v.captureStream():null;
+  if(vs)vs.getAudioTracks().forEach(t=>out.addTrack(t));
+  const mime=MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':'video/webm';
+  const rec=new MediaRecorder(out,{mimeType:mime,videoBitsPerSecond:6e6});
+  const parts=[];rec.ondataavailable=e=>parts.push(e.data);
+  const done=new Promise(r=>rec.onstop=r);
+  status('Export du clip '+(i+1)+' (temps réel)…');
+  rec.start();await play(c,ctx);rec.stop();await done;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(parts,{type:mime}));
+  a.download=`clip-${i+1}.${mime==='video/mp4'?'mp4':'webm'}`;a.click();
+  status('Clip '+(i+1)+' exporté.');
+}
+const fmt=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+</script>
+</body>
+</html>
