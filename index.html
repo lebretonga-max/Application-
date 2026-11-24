@@ -80,13 +80,22 @@ function pick(e,n,dur){
   const max=Math.max(...res.map(r=>r.s))||1;
   return res.map(r=>({start:r.t,dur,score:Math.round(r.s/max*100),subs:[]})).sort((a,b)=>a.start-b.start);
 }
-
+function even(n,dur){
+  const T=Math.floor(v.duration),k=Math.max(1,Math.min(n,Math.floor(T/dur)));
+  const gap=k>1?(T-dur)/(k-1):0;
+  return Array.from({length:k},(_,i)=>({start:Math.floor(i*gap),dur,score:0,subs:[]}));
+}
 $('go').onclick=async()=>{
   const f=$('file').files[0]; if(!f)return status('Choisis une vidéo.');
   try{
     status('Analyse audio…'); prog(20);
-    const e=await energy(f);
-    clips=pick(e,+$('n').value,+$('dur').value); prog(60);
+     try{ clips=pick(await energy(f),+$('n').value,+$('dur').value); }
+    catch(_){
+      await new Promise(r=>v.readyState>=1?r():v.addEventListener('loadedmetadata',r,{once:true}));
+      clips=even(+$('n').value,+$('dur').value);
+      status('Analyse audio impossible ici : clips répartis régulièrement.');
+    }
+    prog(60);   
     render();
     if($('api').value.trim()){ await transcribeAll(f); }
     prog(100); status(clips.length+' clips prêts.');
