@@ -5,47 +5,112 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Clip — clipping vidéo automatique</title>
 <style>
-:root{--bg:#0f1115;--card:#1a1d24;--tx:#f2f3f5;--mut:#8b91a0;--ac:#7c5cff}
+:root{--bg:#0b0d17;--card:#171a2b;--tx:#f4f5fa;--mut:#9aa1b8;--a:#7c5cff;--b:#ff5c8a;--c:#3ad1ff;--line:#2a2e45}
 *{box-sizing:border-box}
-body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--tx);padding:16px;max-width:900px;margin:auto}
-h1{font-size:22px;margin:8px 0 16px}
-.card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:12px}
-button,input,select{font:inherit;border-radius:8px;border:1px solid #333845;background:#23262f;color:var(--tx);padding:8px 12px}
-button.p{background:var(--ac);border:0;font-weight:600}
+body{margin:0;font:15px system-ui,sans-serif;color:var(--tx);background:radial-gradient(900px 500px at 10% -10%,#2a1f6b55,transparent),radial-gradient(800px 500px at 100% 0,#7a1f4d44,transparent),var(--bg);min-height:100vh}
+header{position:sticky;top:0;z-index:5;background:#0b0d17ee;backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:16px}
+.brand{font-weight:800;font-size:20px;background:linear-gradient(90deg,var(--a),var(--b));-webkit-background-clip:text;color:transparent;white-space:nowrap}
+nav{display:flex;gap:6px;overflow-x:auto}
+nav button{background:none;border:0;color:var(--mut);padding:8px 14px;border-radius:999px;font:inherit;font-weight:600;white-space:nowrap}
+nav button.on{color:#fff;background:linear-gradient(90deg,var(--a),var(--b))}
+main{max-width:960px;margin:auto;padding:20px 16px 60px}
+section[hidden]{display:none}
+.hero{text-align:center;padding:40px 10px}
+.hero h2{font-size:34px;line-height:1.15;margin:0 0 12px}
+.hero h2 span{background:linear-gradient(90deg,var(--c),var(--a),var(--b));-webkit-background-clip:text;color:transparent}
+.hero p{color:var(--mut);max-width:560px;margin:0 auto 22px;font-size:16px}
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:30px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.card h3{margin:0 0 6px;font-size:16px}
+.card p{margin:0;color:var(--mut);font-size:14px}
+.ico{font-size:26px;margin-bottom:8px}
+button,input{font:inherit;border-radius:10px;border:1px solid var(--line);background:#20243a;color:var(--tx);padding:9px 14px}
+button.p{background:linear-gradient(90deg,var(--a),var(--b));border:0;font-weight:700;color:#fff}
 input[type=text]{width:100%}
-label{display:block;color:var(--mut);font-size:13px;margin:8px 0 4px}
+label{display:block;color:var(--mut);font-size:13px;margin:10px 0 4px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
-.clip canvas{width:100%;aspect-ratio:9/16;background:#000;border-radius:8px}
+.clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:14px}
+.clip canvas{width:100%;aspect-ratio:9/16;background:#000;border-radius:12px}
 .mut{color:var(--mut);font-size:13px}
-#prog{height:6px;background:#23262f;border-radius:3px;overflow:hidden;margin-top:8px}
-#prog i{display:block;height:100%;width:0;background:var(--ac)}
+#prog{height:6px;background:#20243a;border-radius:3px;overflow:hidden;margin-top:10px}
+#prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--c),var(--a),var(--b))}
+.step{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.num{flex:none;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center;font-weight:800}
+h2.t{margin:6px 0 14px}
 video{display:none}
 </style>
 </head>
 <body>
-<h1>✂️ Clip</h1>
+<header>
+  <div class="brand">✂️ Clip</div>
+  <nav>
+    <button data-tab="home" class="on">Accueil</button>
+    <button data-tab="studio">Studio</button>
+    <button data-tab="how">Comment ça marche</button>
+    <button data-tab="settings">Réglages</button>
+  </nav>
+</header>
 
-<div class="card">
-  <input type="file" id="file" accept="video/*">
-  <div class="row" style="margin-top:10px">
-    <span class="mut">Nb de clips</span><input type="number" id="n" value="5" min="1" max="12" style="width:70px">
-    <span class="mut">Durée (s)</span><input type="number" id="dur" value="30" min="10" max="90" style="width:70px">
-    <button class="p" id="go">Analyser</button>
+<main>
+<section id="home" class="tab">
+  <div class="hero">
+    <h2>Transforme tes vidéos longues en <span>clips verticaux</span></h2>
+    <p>Détection des meilleurs moments, recadrage 9:16 et sous-titres automatiques, directement depuis ton navigateur.</p>
+    <button class="p" data-tab="studio" style="font-size:16px;padding:12px 26px">Commencer</button>
   </div>
-  <label>URL du backend (optionnel, pour les sous-titres Whisper)</label>
-  <input type="text" id="api" placeholder="https://clip.onrender.com">
-  <div id="prog"><i></i></div>
-  <div class="mut" id="status"></div>
-</div>
+  <div class="feats">
+    <div class="card"><div class="ico">🎯</div><h3>Moments forts</h3><p>L'app repère les passages les plus marquants de ta vidéo.</p></div>
+    <div class="card"><div class="ico">📱</div><h3>Format vertical</h3><p>Recadrage 9:16 prêt pour TikTok, Reels et Shorts.</p></div>
+    <div class="card"><div class="ico">💬</div><h3>Sous-titres</h3><p>Transcription automatique incrustée dans le clip.</p></div>
+  </div>
+</section>
 
-<div class="clips" id="clips"></div>
+<section id="studio" class="tab" hidden>
+  <h2 class="t">Studio</h2>
+  <div class="card">
+    <input type="file" id="file" accept="video/*">
+    <div class="row" style="margin-top:12px">
+      <span class="mut">Nb de clips</span><input type="number" id="n" value="5" min="1" max="12" style="width:70px">
+      <span class="mut">Durée (s)</span><input type="number" id="dur" value="30" min="5" max="90" style="width:70px">
+      <button class="p" id="go">Analyser</button>
+    </div>
+    <div id="prog"><i></i></div>
+    <div class="mut" id="status" style="margin-top:6px"></div>
+  </div>
+  <div class="clips" id="clips"></div>
+</section>
+
+<section id="how" class="tab" hidden>
+  <h2 class="t">Comment ça marche</h2>
+  <div class="card step"><div class="num">1</div><div><h3>Importe</h3><p>Choisis une vidéo depuis ton appareil dans le Studio.</p></div></div>
+  <div class="card step"><div class="num">2</div><div><h3>Analyse</h3><p>Choisis le nombre et la durée des clips, puis touche Analyser.</p></div></div>
+  <div class="card step"><div class="num">3</div><div><h3>Aperçu</h3><p>Regarde chaque clip recadré en vertical.</p></div></div>
+  <div class="card step"><div class="num">4</div><div><h3>Exporte</h3><p>Télécharge le clip avec le son, prêt à publier.</p></div></div>
+</section>
+
+<section id="settings" class="tab" hidden>
+  <h2 class="t">Réglages</h2>
+  <div class="card">
+    <label>URL du backend (sous-titres Whisper)</label>
+    <input type="text" id="api" placeholder="https://ton-service.onrender.com">
+    <p class="mut" style="margin-top:8px">Laisse vide pour utiliser l'app sans sous-titres.</p>
+  </div>
+</section>
+</main>
+
 <video id="v" playsinline></video>
 
 <script>
 const $=id=>document.getElementById(id);
 const v=$('v'),status=m=>$('status').textContent=m,prog=p=>$('prog').firstElementChild.style.width=p+'%';
 let url=null,clips=[];
+
+function show(t){
+  document.querySelectorAll('section.tab').forEach(s=>s.hidden=s.id!==t);
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  scrollTo(0,0);
+}
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>show(b.dataset.tab));
 
 $('file').onchange=e=>{
   const f=e.target.files[0]; if(!f)return;
@@ -85,17 +150,18 @@ function even(n,dur){
   const gap=k>1?(T-dur)/(k-1):0;
   return Array.from({length:k},(_,i)=>({start:Math.floor(i*gap),dur,score:0,subs:[]}));
 }
+
 $('go').onclick=async()=>{
   const f=$('file').files[0]; if(!f)return status('Choisis une vidéo.');
   try{
     status('Analyse audio…'); prog(20);
-     try{ clips=pick(await energy(f),+$('n').value,+$('dur').value); }
+    try{ clips=pick(await energy(f),+$('n').value,+$('dur').value); }
     catch(_){
       await new Promise(r=>v.readyState>=1?r():v.addEventListener('loadedmetadata',r,{once:true}));
       clips=even(+$('n').value,+$('dur').value);
       status('Analyse audio impossible ici : clips répartis régulièrement.');
     }
-    prog(60);   
+    prog(60);
     render();
     if($('api').value.trim()){ await transcribeAll(f); }
     prog(100); status(clips.length+' clips prêts.');
@@ -138,7 +204,7 @@ function render(){
   clips.forEach((c,i)=>{
     const d=document.createElement('div');d.className='card clip';
     d.innerHTML=`<canvas width="270" height="480"></canvas>
-      <div class="mut">Clip ${i+1} · ${fmt(c.start)} → ${fmt(c.start+c.dur)} · score ${c.score}</div>
+      <div class="mut" style="margin-top:8px">Clip ${i+1} · ${fmt(c.start)} → ${fmt(c.start+c.dur)} · score ${c.score}</div>
       <div class="row" style="margin-top:8px"><button>▶︎ Aperçu</button><button class="p">Exporter</button></div>`;
     const cv=d.querySelector('canvas'),ctx=cv.getContext('2d');
     const [pv,ex]=d.querySelectorAll('button');
@@ -173,12 +239,12 @@ function audioTrack(){
   actx.resume();
   return dest.stream.getAudioTracks()[0];
 }
-  async function exportClip(c,i){
+async function exportClip(c,i){
   const cv=document.createElement('canvas');cv.width=1080;cv.height=1920;
   const ctx=cv.getContext('2d');
   const out=cv.captureStream(30);
   v.muted=false;
-    try{ out.addTrack(audioTrack()); }catch(e){}
+  try{ out.addTrack(audioTrack()); }catch(e){}
   const mime=MediaRecorder.isTypeSupported('video/mp4')?'video/mp4':'video/webm';
   const rec=new MediaRecorder(out,{mimeType:mime,videoBitsPerSecond:6e6});
   const parts=[];rec.ondataavailable=e=>parts.push(e.data);
